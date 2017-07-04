@@ -1,0 +1,12 @@
+<div class="panel-body">
+                            <table class="table table-responsive">
+                                <tbody id="table-content">
+{% for twitt in twitts %}
+    <tr>
+        <td><h5>{{ twitt.user.screen_name }}</h5></td>
+        <td><h5>{{twitt.text}}</h5></td>
+    </tr>
+{% endfor %}
+                                </tbody>
+                            </table>
+                        </div>

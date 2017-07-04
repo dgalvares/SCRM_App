@@ -1,0 +1,89 @@
+{% extends "scrm/base.html" %}
+{% block base %}
+<script>
+    var old_id;
+    function detail(extracao_id) {
+        $.ajax({
+            method: 'post',
+            url: '{% url 'twitter_table' %}',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+                'extracao_id': extracao_id
+            }
+        }).done(function (data) {
+            $("#detail_pannel").removeClass("hidden");
+            $("#extracao_"+old_id).toggleClass("list-group-item-success");
+            $("#btn_search_"+old_id).toggleClass("disabled");
+            $("#extracao_"+extracao_id).toggleClass("list-group-item-success");
+            $("#btn_search_"+extracao_id).toggleClass("disabled");
+            $("#detail_pannel").html(data);
+            old_id = extracao_id;
+        });
+
+    }
+</script>
+<div class="row">
+    <div class="col-lg-12">
+        <h1 class="page-header">Coletas Efetuadas</h1>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <i class="fa fa-file-text fa-fw"></i>
+            </div>
+            <div class="panel-body">
+                <div class="col-lg-6">
+                    {% if retorno.extracao_list|length > 3 %}
+                    <div class="list-group" style="height: 350px;  overflow-y: scroll;">
+                    {% endif %}
+                        {% if retorno.extracao_list|length <= 3 %}
+                        <div class="list-group">
+                        {% endif %}
+
+                            {% for extracao in retorno.extracao_list %}
+                                <div class="list-group-item" id="extracao_{{ extracao.id }}">
+                                    <div>
+                                        <h5><b>Termo:</b> {{ extracao.termo }}</h5>
+                                        <h5><b>Fonte:</b> {{ extracao.fonte }}   {{ extracao.quantidade }} Resultados</h5>
+                                    </div>
+                                    <div>
+                                        <form action="{% url 'deletarColeta' %}" method="post">
+                                            <button class="btn btn-circle btn-twitter" id="btn_search_{{ extracao.id }}" type="button" onclick="detail({{ extracao.id }})">
+                                                <i class="fa fa-search"></i>
+                                            </button>
+                                            <button class="btn btn-circle btn-success" type="button">
+                                                <i class="fa fa-gears"></i>
+                                            </button>
+                                                {% csrf_token %}
+                                            <button class="btn btn-circle btn-danger" type="submit" name="extracao_id" value="{{ extracao.id }}">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% if retorno.extracao_list|length > 3 %}
+                        </div>
+                        {% endif %}
+                    {% if retorno.extracao_list|length <= 3 %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-lg-6">
+                    <div class="chat-panel panel hidden" id="detail_pannel">
+{#                        <div class="panel-body">#}
+{#                            <table class="table table-responsive">#}
+{#                                <tbody id="table-content">#}
+{#                                </tbody>#}
+{#                            </table>#}
+{#                        </div>#}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

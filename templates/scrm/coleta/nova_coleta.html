@@ -1,0 +1,181 @@
+{% extends "scrm/base.html" %}
+{% block base %}
+<script>
+
+{#     window.fbAsyncInit = function() {#}
+{#        FB.init({#}
+{#          appId      : 'your-app-id',#}
+{#          xfbml      : true,#}
+{#          version    : 'v2.9'#}
+{#        });#}
+{#        FB.AppEvents.logPageView();#}
+{#      };#}
+{##}
+{#      (function(d, s, id){#}
+{#         var js, fjs = d.getElementsByTagName(s)[0];#}
+{#         if (d.getElementById(id)) {return;}#}
+{#         js = d.createElement(s); js.id = id;#}
+{#         js.src = "//connect.facebook.net/en_US/sdk.js";#}
+{#         fjs.parentNode.insertBefore(js, fjs);#}
+{#       }(document, 'script', 'facebook-jssdk'));#}
+{##}
+{#       FB.api(#}
+{#        "/search",#}
+{#        {#}
+{#            "type": "topic",#}
+{#            "q": "lebron james",#}
+{#            "fields": "id,name,page"#}
+{#        },#}
+{#        function (response) {#}
+{#          if (response && !response.error) {#}
+{#            /* handle the result */#}
+{#          }#}
+{#        }#}
+{#    );#}
+
+    $(document).ready(function () {
+        $("#bt-facebook").click(function () {
+            $("#facebook_form").show();
+            $("#twitter_form").hide();
+            $("#base_form").hide();
+            $("#bt-facebook").addClass('active');
+            $("#bt-twitter").removeClass('active');
+        });
+        $("#bt-twitter").click(function () {
+            $("#facebook_form").hide();
+            $("#twitter_form").show();
+            $("#base_form").hide();
+            $("#bt-facebook").removeClass('active');
+            $("#bt-twitter").addClass('active');
+            refresh_trends();
+        });
+    });
+    function set_filter (filter) {
+        $("#filtro_twitter_id").val(filter);
+    }
+
+    function refresh_trends() {
+        $("#refresh-icon").addClass('fa-spin');
+        $.ajax({
+            method: 'post',
+            url: '{% url 'twitter_trends' %}',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            }
+        }).done(function (data) {
+            $("#refresh-icon").removeClass('fa-spin');
+            $("#table-content").html(data);
+        });
+
+    }
+{#    refresh_trends();#}
+</script>
+<div class="row">
+    <div class="col-lg-12">
+        <h1 class="page-header">Nova Coleta</h1>
+    </div>
+    <!-- /.col-lg-12 -->
+</div>
+<div class="row">
+    <div class="col-lg-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <i class="fa fa-search fa-fw"></i>
+            </div>
+            <div class="panel-body">
+                <div id="base_form">
+                     <br>
+                        <div class="row">
+                            <div class="col-lg-4 col-lg-offset-1">
+                                <h2>Escolher bla bla bla</h2>
+                            </div>
+                        </div>
+                </div>
+                <div class="btn-group btn-group" role="group">
+                    <button id="bt-twitter" class="btn btn-default">Twitter</button>
+                    <button id="bt-facebook" class="btn btn-default">Facebook</button>
+                </div>
+
+                <div id="twitter_form" hidden>
+                    <div class="row">
+
+                        <div class="col-lg-6">
+                            <form role="form" method="post" action="{% url 'coletarTwitter' %}">
+                                {% csrf_token %}
+                                <br>
+                                    <div class="form-group">
+                                        <div class="col-lg-offset-1">
+                                            <h3>Quantidade de Postagens: </h3>
+                                            <div class="col-lg-4">
+                                                <input type="number" class="form-control" name="max_posts" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <br>
+                                    <div class="form-group">
+                                        <div class="col-lg-offset-1">
+                                            <h3>Buscar no Twitter: </h3>
+                                            <div class="col-lg-8">
+                                                <input id="filtro_twitter_id" type="text" class="form-control" name="filtro" placeholder="Buscar por ..." required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <br>
+                                <br>
+                                <div class="col-lg-10">
+                                    <button class="btn btn-lg btn-block" type="submit">Buscar</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-lg-6">
+                            <table class="table table-responsive">
+                                <thead>
+                                    <tr>
+                                        <td></td>
+                                        <td>
+                                            <h4>Twitter trends no Brasil</h4>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-circle btn-success" onclick="refresh_trends()">
+                                                <i id="refresh-icon" class="fa fa-refresh"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-content">
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="facebook_form" hidden>
+                        <div class="col-lg-6">
+                            <form method="post" action="{% url 'coletarFacebook' %}">
+                                {% csrf_token %}
+                                <br>
+                                <div class="row">
+                                    <div class="col-lg-4 col-lg-offset-1">
+                                        <div class="input-group input-group-lg">
+                                            <input type="number" class="form-control" name="max_posts" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="row">
+                                    <div class="col-lg-10 col-lg-offset-1">
+                                        <div class="input-group input-group-lg">
+                                            <input type="text" class="form-control" name="filtro" placeholder="Nome da Comunidade" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-default" type="submit">Buscar</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

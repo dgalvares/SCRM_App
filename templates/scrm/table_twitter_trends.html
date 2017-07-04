@@ -1,0 +1,17 @@
+{% for trend in trends %}
+    <tr>
+        <td>
+            <button class="btn btn-circle btn-twitter" type="button" onclick="set_filter('{{ trend.name }}')">
+            <i class="fa fa-search"></i>
+            </button>
+        </td>
+        <td>
+            <a href="{{ trend.url }}" target="_blank">
+                {{ trend.name }}
+            </a>
+        </td>
+        <td>
+            {{ trend.tweet_volume }}
+        </td>
+    </tr>
+{% endfor %}
