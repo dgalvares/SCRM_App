@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm, AdminPasswordChangeForm
 from django.http import HttpResponse
+from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -89,7 +90,7 @@ def coletasEfetuadas(request):
     user_id = request.user.id
     user = User.objects.get(pk=user_id)
     retorno = {}
-    extracao_list = Extracao.objects.all().filter(usuario=user,concluido=True)
+    extracao_list = Extracao.objects.all().filter(usuario=user)
     retorno['extracao_list'] = extracao_list
     return render(request, 'scrm/coleta/coletas.html', {"retorno": retorno})
 
@@ -119,7 +120,13 @@ def novaAnalise(request):
 
 @login_required
 def analisesEfetuadas(request):
-    return render(request, 'scrm/analise/analises.html')
+    user_id = request.user.id
+    user = User.objects.get(pk=user_id)
+    retorno = {}
+    processamento_list = Processamento.objects.all().filter(usuario=user)
+
+    retorno['process_list'] = processamento_list
+    return render(request, 'scrm/analise/analises.html',{"retorno":retorno})
 
 
 @login_required
@@ -160,6 +167,15 @@ def coletarFacebook(request):
 
 
 @login_required
+def pol_table(request):
+    process_id = request.POST.get('process_id')
+    process = Processamento.objects.get(pk=process_id)
+    pol_list = AvaliacaoPolaridade.objects.all().filter(processamento=process)
+    html = render_to_string('scrm/analise/pol_table.html', {"pol_list":pol_list})
+    return HttpResponse(html)
+
+
+@login_required
 def twitter_table(request):
     extracao_id = request.POST.get('extracao_id')
     db = MongodbConnector.connect_db('socialNet')
@@ -183,7 +199,11 @@ def twitter_trends(request):
 
 @login_required
 def analisar(request):
+    user_id = request.user.id
+    user = User.objects.get(pk=user_id)
     processamento = Processamento()
+    processamento.usuario = user
+    processamento.data = datetime.datetime.now()
     extracao_id = request.POST.get('extracao_opt')
     extracao = Extracao.objects.get(pk=extracao_id)
     processamento.extracao = extracao
@@ -193,10 +213,15 @@ def analisar(request):
     collection = MongodbConnector.connect_collection(db, 'twitter')
     twitters = collection.find({"extracao": str(extracao.id)})
     colecao = []
+    polaridades = []
     for twitt in twitters:
         colecao.append(twitt['text'])
+        av_polaridade = AvaliacaoPolaridade()
+        av_polaridade.processamento = processamento
+        av_polaridade.frase = (twitt['text'])
+        polaridades.append(av_polaridade)
     # predicted = svm.multiclass('teste', 'SVM', colecao)
-    t = threading.Thread(target=svm.multiclass,args=('base teste','SVM',colecao))
+    t = threading.Thread(target=svm.multiclass,args=('base teste','SVM',colecao,polaridades,processamento))
     print("start analise")
     t.start()
     # for item in predicted:
@@ -204,7 +229,7 @@ def analisar(request):
     #     avaliacao.processamento = processamento
     #     avaliacao.polaridade = item
 
-    return redirect(novaAnalise)
+    return redirect(analisesEfetuadas)
 
 
 @login_required
@@ -217,3 +242,24 @@ def list_extraction_opts(request):
         list.append(str(item.fonte)+": "+str(item.termo+"  "+str(item.quantidade)+" resultados"))
     html = render_to_string('scrm/select_options_list.html', {"list": list})
     return HttpResponse(html)
+
+
+@login_required
+def update_coleta_status(request):
+    user_id = request.user.id
+    extracao_id = request.POST.get('extracao_id')
+    extracao = Extracao.objects.get(pk=extracao_id)
+    db = MongodbConnector.connect_db('socialNet')
+    collection = MongodbConnector.connect_collection(db, 'twitter')
+    done = extracao.concluido
+    fonte = extracao.fonte
+    quantidade = collection.find({"extracao": extracao_id}).count()
+    return JsonResponse({"done":done,"fonte":fonte,"quantidade":quantidade})
+
+
+@login_required
+def update_process_status(request):
+    process_id = request.POST.get('process_id')
+    process = Processamento.objects.get(pk=process_id)
+    done = process.concluido
+    return JsonResponse({"done":done})

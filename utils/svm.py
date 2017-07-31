@@ -2,6 +2,7 @@ import glob
 import pprint
 import re
 import string
+from itertools import product
 
 import numpy as np
 import pandas as pd
@@ -9,173 +10,114 @@ import scipy.sparse as sp
 import unicodedata
 
 from scrm.models import DatasetTreito
-from collections import defaultdict
 from sklearn import svm
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.neural_network import MLPClassifier
-from sklearn import tree
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import VotingClassifier
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
 from  sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, f1_score, confusion_matrix
+import nltk
 from nltk.stem.porter import *
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
 
 stemmer = PorterStemmer()
-stopwords_EN = set(stopwords.words('english'))
+
+stopwords_PT = [word.strip() for word in open("utils/stopwords_PT_R.txt").readlines()]
+# stopwords_PT = set(stopwords.words('portuguese'))
 wordnet_lemmatizer = WordNetLemmatizer()
 
-def preprocessing_EN(base):
+def preprocessing_PT(base):
+    # REMOVE URLS
+    base['Message'] = base['Message'].replace(to_replace='http\\S+\\s*', value='', regex=True)
 
-    base = base.replace(to_replace='http\\S+\\s*', value='', regex=True)
+    # REMOVE hashtags
+    base['Message'] = base['Message'].replace(to_replace='#\\S+', value='', regex=True)
 
-    base = base.replace(to_replace='#\\S+', value='', regex=True)
+    # REMOVE @mentions
+    base['Message'] = base['Message'].replace(to_replace='@\\S+', value='', regex=True)
 
-    base = base.replace(to_replace='@\\S+', value='', regex=True)
+    # REPLACE ALL PUNCTUATION BY WHITESPACE
+    base['Message'] = base['Message'].replace(to_replace='[%s]' % re.escape(string.punctuation), value=' ',
+                                              regex=True)
 
-    base = base.replace(to_replace='[%s]' % re.escape(string.punctuation), value=' ',
-                                                      regex=True)
+    # To Lowercase
+    base['Message'] = base['Message'].apply(lambda x: x.lower())
 
-    base = base.replace(to_replace='\d+', value='', regex=True)
-    print("preprocessing...OK")
+    # REMOVE Stopwords
+    base['Message'] = base['Message'].apply(
+        lambda x: " ".join([word for word in [item for item in x.split() if item not in stopwords_PT]]))
+
+    # Stemming
+    # print(tweets['Message'][22])
+    # RSLP Stemming
+    stemmer = nltk.stem.RSLPStemmer()
+
+    # Snowball Stemming
+    # stemmer = nltk.stem.SnowballStemmer("portuguese")
+
+    base['Message'] = base['Message'].apply(
+        lambda x: " ".join([word for word in [stemmer.stem(item) for item in x.split() if item not in stopwords_PT]]))
+
+    # REPLACE Portuguese accented characters in R with non-accented counterpart
+    base['Message'] = base['Message'].apply(
+        lambda x: unicodedata.normalize('NFKD', np.unicode(x)).encode('ASCII', 'ignore'))
+
+    # REMOVE Numbers
+    base['Message'] = base['Message'].replace(to_replace='\d+', value='', regex=True)
+
     return base
 
 
-def vectorizeTFIDF_train(data, ngram_range):
-    if ngram_range == (1, 2, 3):
-        ngram_range = (1, 3)
+def funcTeste(train,test,clf):
+    vectorizer = TfidfVectorizer(min_df=1)
+    counter = CountVectorizer(min_df=1)
 
-        vectorizer = CountVectorizer(min_df=1, ngram_range=ngram_range)
-        # vectorizer = TfidfVectorizer(min_df=1,ngram_range=ngram_range)
-
-        X = vectorizer.fit_transform(data)
-        # X = vectorizer.transform(data)
-
-        # TFIDF weights
-        transformer = TfidfTransformer()
-        X = transformer.fit_transform(X)
-        # X = transformer.transform(X)
-
-        return X
-
-    if ngram_range == (1, 3):
-
-        vectorizer = CountVectorizer(min_df=1, ngram_range=(1, 1))
-        X = vectorizer.fit_transform(data)
-
-        # TFIDF weights
-        transformer = TfidfTransformer()
-        X = transformer.fit_transform(X)
-
-        ngram_range = (3, 3)
-
-        vectorizer_3 = CountVectorizer(min_df=1, ngram_range=(3, 3))
-        X_3 = vectorizer.fit_transform(data)
-
-        # TFIDF weights
-        transformer_3 = TfidfTransformer()
-        X_3 = transformer.fit_transform(X_3)
-
-        X_final = sp.hstack((X, X_3), format='csr')
-
-        X = X_final
-
-    else:
-        vectorizer = CountVectorizer(min_df=1, ngram_range=ngram_range)
-        X = vectorizer.fit_transform(data)
-
-        # TFIDF weights
-        transformer = TfidfTransformer()
-        X = transformer.fit_transform(X)
-
-    return X
+    x_train=vectorizer.fit_transform(train['Message'])
+    num_sample,num_features=x_train.shape
 
 
-def vectorizeTFIDF_test(data, ngram_range):
-    if ngram_range == (1, 2, 3):
-        ngram_range = (1, 3)
+    x_test=vectorizer.transform(test)
+    test_sample,test_features=x_test.shape
 
-        # vectorizer = CountVectorizer(min_df=1, ngram_range=ngram_range)
-        vectorizer = TfidfVectorizer(min_df=1,ngram_range=ngram_range)
+    clf.fit(x_train,train['Truth'])
 
-        # X = vectorizer.fit_transform(data)
-        X = vectorizer.transform(data)
+    prediction = clf.predict(x_test)
 
-        # TFIDF weights
-        transformer = TfidfTransformer()
-        # X = transformer.fit_transform(X)
-        X = transformer.transform(X)
-
-        return X
-
-    if ngram_range == (1, 3):
-
-        vectorizer = CountVectorizer(min_df=1, ngram_range=(1, 1))
-        X = vectorizer.fit_transform(data)
-
-
-        # TFIDF weights
-        transformer = TfidfTransformer()
-        # X = transformer.fit_transform(X)
-        X = transformer.transform(X)
-
-
-        ngram_range = (3, 3)
-
-        vectorizer_3 = CountVectorizer(min_df=1, ngram_range=(3, 3))
-        X_3 = vectorizer.fit_transform(data)
-
-        # TFIDF weights
-        transformer_3 = TfidfTransformer()
-        X_3 = transformer.fit_transform(X_3)
-
-        X_final = sp.hstack((X, X_3), format='csr')
-
-        X = X_final
-
-    else:
-        vectorizer = CountVectorizer(min_df=1, ngram_range=ngram_range)
-        X = vectorizer.fit_transform(data)
-
-        # TFIDF weights
-        transformer = TfidfTransformer()
-        X = transformer.fit_transform(X)
-
-    return X
-
+    return prediction
 
 
 def get_multc_fit(clf, dataset):
-
-    y = dataset['Truth']
-    X = to_vector(dataset['Message'], 1)
-    clf.fit(X, y)
+    vectorizer = TfidfVectorizer(min_df=1)
+    x_train = vectorizer.fit_transform(dataset['Message'])
+    clf.fit(x_train, dataset['Truth'])
     print("get_multc_fit...OK")
     return clf
 
-def to_vector(dataset,opt):
-    r_vec = [(1, 1), (2, 2), (3, 3), (1, 2), (1, 3), (1, 2, 3)]
-    fname_vec = ["UNIGRAM", "BIGRAM", "TRIGRAM", "UNI_BI", "UNI_TRI", "UNI_BI_TRI"]
 
-    for r, fname in zip(r_vec, fname_vec):
-        if(opt ==1):
-            X = vectorizeTFIDF_train(dataset, r)
-        else:
-            X = vectorizeTFIDF_test(dataset, r)
-    return X
+def get_svm_predict(clf,test):
+    vectorizer = TfidfVectorizer(min_df=1)
+    x_test = vectorizer.transform(test)
+    predict = clf.predict(x_test)
+
+    return predict
 
 
-def multiclass(train_dataset_name, label, target):
+def multiclass(train_dataset_name, label, target,polaridades,processamento):
     train_dataset = DatasetTreito.objects.get(nome__contains=train_dataset_name)
     dataset = pd.read_csv(train_dataset.arquivo)
-    clf = get_multc_fit(svm.SVC(kernel='linear'),dataset)
-    # target = pd.DataFrame(target)
-    # target = preprocessing_EN(target)
-    target = to_vector(target, 2)
-    predicted = clf.predict(target)
-    pprint.pprint(predicted)
-    return predicted
+    dataset = preprocessing_PT(dataset)
+    data_01 = target
+    target = pd.DataFrame(target, columns=['Message'])
+    target = preprocessing_PT(target)
+    data = target['Message']
+    pprint.pprint(data)
+
+    clf = svm.SVC(kernel='linear')
+
+    predicted = funcTeste(dataset,data,clf)
+    for avaliacao,text,polaridade in zip(polaridades,data_01,predicted):
+        pprint.pprint(text)
+        avaliacao.frase = text
+        avaliacao.polaridade = polaridade
+        avaliacao.save()
+    processamento.concluido=True
+    processamento.save()

@@ -27,7 +27,10 @@ class Extracao(models.Model):
 
 
 class Processamento(models.Model):
+    usuario = models.ForeignKey(User)
     extracao = models.ForeignKey(Extracao)
+    data = models.DateTimeField()
+
     concluido = models.BooleanField(default=False)
 
 

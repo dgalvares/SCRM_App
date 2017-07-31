@@ -17,6 +17,7 @@ access_token_secret = "apwDkhxoWZAw9g23AJmnOowsvAOHuTwgox0XWZt2XZSYh"
 
 def extrair(filter, max_twitts, extracao_id, extracao):
     twitter_list = []
+    running = 0
     class StdOutListener(StreamListener):
         def on_data(self, data):
             twitt = json.loads(data)

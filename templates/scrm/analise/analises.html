@@ -1,3 +1,120 @@
 {% extends "scrm/base.html" %}
+{% load staticfiles %}
 {% block base %}
-{% endblock %}\
+<script>
+    var old_id;
+    function detail(process_id) {
+        $.ajax({
+            method: 'post',
+            url: '{% url 'pol_table' %}',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+                'process_id': process_id
+            }
+        }).done(function (data) {
+            $("#detail_pannel").removeClass("hidden");
+            $("#process_"+old_id).toggleClass("list-group-item-success");
+            $("#btn_search_"+old_id).toggleClass("disabled");
+            $("#process_"+process_id).toggleClass("list-group-item-success");
+            $("#btn_search_"+process_id).toggleClass("disabled");
+            $("#detail_pannel").html(data);
+            old_id = process_id;
+        });
+
+    }
+    function updateStatus(process_id){
+        console.log("teste update func "+process_id);
+
+        var interval = setInterval(request,2000);
+        function request() {
+            console.log("teste request func "+process_id);
+            $.ajax({
+            method: 'post',
+            url: '{% url 'update_process_status' %}',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+                'process_id': process_id
+            }
+        }).done(function (data) {
+            console.log("test request func "+process_id);
+            var done = data.done;
+            if(done){
+                clearInterval(interval);
+                $("#img_"+process_id).hide();
+            }else {
+                $("#img_"+process_id).show();
+            }
+        });
+        }
+    }
+</script>
+<div class="row">
+    <div class="col-lg-12">
+        <h1 class="page-header">Análises Efetuadas</h1>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <i class="fa fa-file-text fa-fw"></i>
+            </div>
+            <div class="panel-body">
+                <div class="col-lg-6">
+                    {% if retorno.process_list|length > 3 %}
+                    <div class="list-group" style="height: 350px;  overflow-y: scroll;">
+                    {% endif %}
+                        {% if retorno.process_list|length <= 3 %}
+                        <div class="list-group">
+                        {% endif %}
+
+                            {% for process in retorno.process_list %}
+                                <div class="list-group-item" id="extracao_{{ process.id }}">
+                                 <div id="img_{{ process.id }}" style="z-index: 100; opacity: 0.90; position: absolute; top: 0; left: 0; background-color: white;bottom: 0;right: 0;">
+                                <img src="{% static 'img/Loading_icon.gif' %}" onload="updateStatus({{ process.id }})" height="100" style="padding-left: 40%">
+                                </div>
+                                    <div id="content_div" style=" position: relative; top: 0; left: 0;">
+                                    <div>
+                                        <h5><b>Data:</b> {{ process.data }}</h5>
+                                        <h5><b>Extracão:</b> {{ process.extracao.fonte }}   {{ process.extracao.termo }} {{ process.extracao.quantidade }} Resultados</h5>
+                                    </div>
+                                    <div>
+                                        <form action="{% url 'deletarColeta' %}" method="post">
+                                            <button class="btn btn-circle btn-twitter" id="btn_search_{{ process.id }}" type="button" onclick="detail({{ process.id }})">
+                                                <i class="fa fa-search"></i>
+                                            </button>
+                                            <button class="btn btn-circle btn-success" type="button">
+                                                <i class="fa fa-gears"></i>
+                                            </button>
+                                                {% csrf_token %}
+                                            <button class="btn btn-circle btn-danger" type="submit" name="process_id" value="{{ process.id }}">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% if retorno.process_list|length > 3 %}
+                        </div>
+                        {% endif %}
+                    {% if retorno.process_list|length <= 3 %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-lg-6">
+                    <div class="chat-panel panel hidden" id="detail_pannel">
+{#                        <div class="panel-body">#}
+{#                            <table class="table table-responsive">#}
+{#                                <tbody id="table-content">#}
+{#                                </tbody>#}
+{#                            </table>#}
+{#                        </div>#}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

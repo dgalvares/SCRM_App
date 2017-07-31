@@ -32,9 +32,12 @@ urlpatterns = [
     url(r'^novaAnalise/$',app_views.novaAnalise, name='novaAnalise'),
     url(r'^analisesEfetuadas/$',app_views.analisesEfetuadas, name='analisesEfetuadas'),
     url(r'^analisar/$',app_views.analisar, name='analisar'),
+    url(r'^pol_table/$',app_views.pol_table, name='pol_table'),
     url(r'^twitter_table/$',app_views.twitter_table,name='twitter_table'),
     url(r'^twitter_trends/$',app_views.twitter_trends,name='twitter_trends'),
     url(r'^coletasOpts/$',app_views.list_extraction_opts,name='coletasOpts'),
+    url(r'^updateColetaStatus/$',app_views.update_coleta_status,name='update_coleta_status'),
+    url(r'^updateProcessStatus/$',app_views.update_process_status, name='update_process_status'),
 
     # url('', include('social_django.urls', namespace='social')),
 

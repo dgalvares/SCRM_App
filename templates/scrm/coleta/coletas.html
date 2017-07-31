@@ -1,4 +1,5 @@
 {% extends "scrm/base.html" %}
+{% load staticfiles %}
 {% block base %}
 <script>
     var old_id;
@@ -21,7 +22,38 @@
         });
 
     }
+
+    function updateStatus(extracao_id){
+        console.log("teste update func "+extracao_id);
+
+        var interval = setInterval(request,2000);
+        function request() {
+            console.log("teste request func "+extracao_id);
+            $.ajax({
+            method: 'post',
+            url: '{% url 'update_coleta_status' %}',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+                'extracao_id': extracao_id
+            }
+        }).done(function (data) {
+            console.log("test request func "+extracao_id);
+            var done = data.done;
+            if(done){
+                clearInterval(interval);
+                $("#img_"+extracao_id).hide();
+                $("#h5_"+extracao_id+"_2").remove();
+                $("#div_"+extracao_id+"_content").append("<h5 id=\"h5_"+extracao_id+"_2\"><b>Fonte:</b> "+data.fonte+"   "+ data.quantidade+" Resultados</h5>");
+            }else {
+                $("#img_"+extracao_id).show();
+                 $("#h5_"+extracao_id+"_2").remove();
+                $("#div_"+extracao_id+"_content").append("<h5 id=\"h5_"+extracao_id+"_2\"><b>Fonte:</b> "+data.fonte+"   "+ data.quantidade+" Resultados</h5>");
+            }
+        });
+        }
+    }
 </script>
+
 <div class="row">
     <div class="col-lg-12">
         <h1 class="page-header">Coletas Efetuadas</h1>
@@ -44,9 +76,13 @@
 
                             {% for extracao in retorno.extracao_list %}
                                 <div class="list-group-item" id="extracao_{{ extracao.id }}">
-                                    <div>
-                                        <h5><b>Termo:</b> {{ extracao.termo }}</h5>
-                                        <h5><b>Fonte:</b> {{ extracao.fonte }}   {{ extracao.quantidade }} Resultados</h5>
+                                <div id="img_{{ extracao.id }}" style="z-index: 100; opacity: 0.90; position: absolute; top: 0; left: 0; background-color: white;bottom: 0;right: 0;">
+                                <img src="{% static 'img/Loading_icon.gif' %}" onload="updateStatus({{ extracao.id }})" height="100" style="padding-left: 40%">
+                                </div>
+                                 <div id="content_div" style=" position: relative; top: 0; left: 0;">
+                                    <div id="div_{{ extracao.id }}_content">
+                                        <h5 id="h5_{{ extracao.id }}_1"><b>Termo:</b> {{ extracao.termo }}</h5>
+                                        <h5 id="h5_{{ extracao.id }}_2"><b>Fonte:</b> {{ extracao.fonte }}   {{ extracao.quantidade }} Resultados</h5>
                                     </div>
                                     <div>
                                         <form action="{% url 'deletarColeta' %}" method="post">
@@ -62,6 +98,7 @@
                                             </button>
                                         </form>
                                     </div>
+                                </div>
                                 </div>
                             {% endfor %}
                         {% if retorno.extracao_list|length > 3 %}
