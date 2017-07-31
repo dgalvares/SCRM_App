@@ -1,0 +1,29 @@
+<div class="panel-body">
+                            <table class="table table-responsive">
+                                <tbody id="table-content">
+{% for pol in pol_list %}
+        {% if pol.polaridade == 1 %}
+    <tr style="background-color: #398439">
+        <td><h5><b>{{ pol.frase }}</b></h5></td>
+        <td><h5>
+            <i class="fa fa-thumbs-o-up"></i>
+
+{#            {{ pol.polaridade}}#}
+        </h5></td>
+    </tr>
+            {% endif %}
+    {% if pol.polaridade == -1 %}
+    <tr style="background-color: #d9534f">
+        <td><h5><b>{{ pol.frase }}</b></h5></td>
+        <td><h5>
+            <i class="fa fa-thumbs-o-down"></i>
+
+{#            {{ pol.polaridade}}#}
+        </h5></td>
+    </tr>
+            {% endif %}
+
+{% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
